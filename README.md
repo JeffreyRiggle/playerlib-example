@@ -12,7 +12,7 @@ Navigate to `./playerlib-example` and run `mvn install`
 ## Running
 After building navigate to `/playerlib-example/target` and run `java -jar PlayerLibExample-1.0.0-SNAPSHOT.jar`
 
-![](playerlibexample.gif)
+![](./playerlibexample.gif)
 
 ## License
 This project is licensed under the MIT License - see the LICENSE.md file for details.
