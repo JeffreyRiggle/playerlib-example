@@ -12,6 +12,26 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v2
+            
+            - name: Set up JDK
+              uses: actions/setup-java@v1
+              with:
+                java-version: '11'
+
+            - name: Setup Maven
+              env:
+                TOKEN: ${{ secrets.GITHUBTOKEN }}
+                USERNAME: JeffreyRiggle
+              run: |
+                envsubst < settings.tmpl > ~/.m2/settings.xml
+            - name: Build with Maven
+              run: mvn install
+            
+            - name: Copy Release
+              run: |
+                files=("/target/*.jar")
+                cp ${files[0]} PlayerLibExample.jar
+
             - name: Create Release
               id: create_release
               uses: actions/create-release@v1
@@ -24,3 +44,14 @@ jobs:
                   New release
                 draft: false
                 prerelease: false
+            
+            - name: Upload build
+              id: upload_build
+              uses: actions/upload-release-asset@v1
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                upload_url: ${{ steps.create_release.outputs.upload_url }}
+                asset_path: ./PlayerLibExample.jar
+                asset_name: PlayerLibExample.jar
+                asset_content_type: application/java-archive
