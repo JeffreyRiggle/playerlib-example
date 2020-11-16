@@ -24,15 +24,49 @@ jobs:
                 USERNAME: JeffreyRiggle
               run: |
                 envsubst < settings.tmpl > ~/.m2/settings.xml
+
+            - name: Version Bump
+              if: startsWith(github.event.head_commit.message, 'Auto Version') != true
+              run: |
+                read_dom() {
+                  IFS=\>
+                  read -d \< ENTITY CONTENT
+                }
+
+                version=""
+
+                while read_dom; do
+                    if [[ $ENTITY = "version" ]]; then
+                        version=$CONTENT
+                        break
+                    fi
+                done < pom.xml
+
+                IFS='.' read -r -a sections <<< "$version"
+                patchVersion="${sections[2]}"
+                newPatchVersion="$(($patchVersion + 1))"
+                newVersion="${sections[0]}.${sections[1]}.${newPatchVersion}"
+                contents=`cat pom.xml`
+                echo "${contents//<version>$version</<version>$newVersion<}" > pom.xml
+                
+                git config --local user.email "$(git log --format='%ae' HEAD^!)"
+                git config --local user.name "$(git log --format='%an' HEAD^!)"
+                git add pom.xml
+                git commit -m "Auto Version"
+                git push
+
             - name: Build with Maven
-              run: mvn install -Drevision="${GITHUB_RUN_NUMBER}"
+              if: startsWith(github.event.head_commit.message, 'Auto Version') != true
+              run: mvn install
             
             - name: Copy Release
+              if: startsWith(github.event.head_commit.message, 'Auto Version') != true
               run: |
                 files=("target/*.jar")
                 cp ${files[0]} PlayerLibExample.jar
 
             - name: Create Release
+              if: startsWith(github.event.head_commit.message, 'Auto Version') != true
               id: create_release
               uses: actions/create-release@v1
               env:
@@ -46,6 +80,7 @@ jobs:
                 prerelease: false
             
             - name: Upload build
+              if: startsWith(github.event.head_commit.message, 'Auto Version') != true
               id: upload_build
               uses: actions/upload-release-asset@v1
               env:
@@ -57,5 +92,6 @@ jobs:
                 asset_content_type: application/java-archive
                 
             - name: Build Site
+              if: startsWith(github.event.head_commit.message, 'Auto Version') != true
               run: |
                 curl -XPOST -u "JeffreyRiggle:${{secrets.SITETOKEN}}" -H "Accept: application/vnd.github.everest-preview+json" -H "Content-Type: application/json" https://api.github.com/repos/JeffreyRiggle/my-site/dispatches --data '{"event_type": "release_site"}'
